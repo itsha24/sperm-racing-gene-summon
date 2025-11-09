@@ -1,3 +1,9 @@
+/**
+ * Summon a card from the backend API
+ * @param {string|null} capsuleTier - The tier of capsule to summon (Common, Rare, Epic, Mythic)
+ * @returns {Promise<Object>} Card data with name, emoji, trait, flavorText, rarity, and stats
+ * @throws {Error} If capsuleTier is not provided or API call fails
+ */
 export async function summonCard(capsuleTier = null) {
   if (capsuleTier) {
     // Use POST with capsuleTier
@@ -12,24 +18,26 @@ export async function summonCard(capsuleTier = null) {
       throw new Error(`Summon failed: ${res.statusText}`);
     }
     const data = await res.json();
-    console.log("Summon result:", data);
     
     // Transform backend format to frontend format
     return {
       name: data.name,
-      emoji: "🧬", // Default emoji since backend doesn't provide it
+      emoji: "💧", // Default emoji since backend doesn't provide it
       trait: data.quote, // Map quote to trait
       flavorText: data.quote, // Map quote to flavorText
       rarity: data.rarity || capsuleTier,
       stats: data.stats || {},
     };
   } else {
-    // Fallback: try old endpoint or return error
-    console.warn("No capsuleTier provided, summon may fail");
     throw new Error("Capsule tier is required for summoning");
   }
 }
 
+/**
+ * Run a race simulation to determine capsule tier
+ * @returns {Promise<Object>} Race result with velocity, motility, linearity, and capsuleTier
+ * @throws {Error} If API call fails
+ */
 export async function runRace() {
   const res = await fetch("http://localhost:5000/api/race", {
     method: "GET",
@@ -38,6 +46,5 @@ export async function runRace() {
     throw new Error(`Race failed: ${res.statusText}`);
   }
   const data = await res.json();
-  console.log("Race result:", data);
   return data;
 }  

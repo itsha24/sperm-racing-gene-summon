@@ -1,12 +1,23 @@
 import { raritySoundMap, regularSound } from "./soundMap";
 
+/**
+ * Sound Player Module
+ * 
+ * Handles all audio playback with Web Audio API for dynamic effects.
+ * Includes rarity-based sound effects, regular sounds, and mute functionality.
+ * 
+ * Note: console.warn/error are used for debugging audio issues and are intentional.
+ */
+
 // Global audio context (lazy-initialized)
 let audioContext = null;
 let currentSource = null; // Track current playing sound to prevent overlaps (BufferSource or HTMLAudioElement)
 let currentHTMLAudio = null; // Track HTML Audio separately for easier cleanup
+let regularSoundSource = null; // Track regular sound source separately
+let regularSoundHTMLAudio = null; // Track regular sound HTML audio
 
 // Mute state management
-const MUTE_STORAGE_KEY = "soundMuted";
+const MUTE_STORAGE_KEY = "soundMuted"; // Keep inline for backward compatibility
 
 function getMuteState() {
   const stored = localStorage.getItem(MUTE_STORAGE_KEY);
@@ -56,6 +67,34 @@ function stopCurrentSound() {
       // Audio may have already stopped
     }
     currentHTMLAudio = null;
+  }
+}
+
+/**
+ * Stop all currently playing sounds (rarity sounds and regular sounds)
+ */
+export function stopAllSounds() {
+  stopCurrentSound();
+  
+  // Stop regular sound Web Audio
+  if (regularSoundSource && typeof regularSoundSource.stop === "function") {
+    try {
+      regularSoundSource.stop();
+    } catch (e) {
+      // Source may have already stopped
+    }
+    regularSoundSource = null;
+  }
+  
+  // Stop regular sound HTML Audio
+  if (regularSoundHTMLAudio) {
+    try {
+      regularSoundHTMLAudio.pause();
+      regularSoundHTMLAudio.currentTime = 0;
+    } catch (e) {
+      // Audio may have already stopped
+    }
+    regularSoundHTMLAudio = null;
   }
 }
 
@@ -275,7 +314,10 @@ function playWithHTMLAudio(rarity) {
   }
 }
 
-// Main function: Play rarity-based sound with dynamic effects
+/**
+ * Play rarity-based sound with dynamic effects (volume, pitch, reverb)
+ * @param {string} rarity - Rarity tier (Common, Rare, Epic, Mythic)
+ */
 export function playRaritySound(rarity) {
   // Check mute state
   if (getMuteState()) {
@@ -302,14 +344,42 @@ export function setMuted(muted) {
 export function toggleMute() {
   const newState = !getMuteState();
   setMuteState(newState);
+  
+  // If muting, stop all currently playing sounds
+  if (newState) {
+    stopAllSounds();
+  }
+  
   return newState;
 }
 
-// Play regular sound (for race start, etc.) - simple playback without effects
+/**
+ * Play regular sound (for race results, etc.) - simple playback without effects
+ */
 export function playRegularSound() {
   // Check mute state
   if (getMuteState()) {
     return;
+  }
+
+  // Stop any currently playing regular sound
+  if (regularSoundSource && typeof regularSoundSource.stop === "function") {
+    try {
+      regularSoundSource.stop();
+    } catch (e) {
+      // Source may have already stopped
+    }
+    regularSoundSource = null;
+  }
+  
+  if (regularSoundHTMLAudio) {
+    try {
+      regularSoundHTMLAudio.pause();
+      regularSoundHTMLAudio.currentTime = 0;
+    } catch (e) {
+      // Audio may have already stopped
+    }
+    regularSoundHTMLAudio = null;
   }
 
   const volume = 0.2; // Moderate volume for regular sounds
@@ -330,10 +400,12 @@ export function playRegularSound() {
         source.connect(gainNode);
         gainNode.connect(ctx.destination);
         
+        regularSoundSource = source;
+        
         source.start(0);
         
         source.onended = () => {
-          // Clean up
+          regularSoundSource = null;
         };
       })
       .catch(() => {
@@ -351,11 +423,19 @@ function playRegularSoundHTML(volume) {
   try {
     const audio = new Audio(regularSound);
     audio.volume = volume;
+    regularSoundHTMLAudio = audio;
+    
     audio.play().catch((error) => {
       console.warn("HTML Audio playback failed for regular sound:", error);
+      regularSoundHTMLAudio = null;
     });
+    
+    audio.onended = () => {
+      regularSoundHTMLAudio = null;
+    };
   } catch (error) {
     console.error("Failed to play regular sound:", error);
+    regularSoundHTMLAudio = null;
   }
 }
 
