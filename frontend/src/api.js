@@ -1,3 +1,19 @@
+// API base URL - use environment variable or detect production vs local
+const getApiBaseUrl = () => {
+  // Check for environment variable (Vite requires VITE_ prefix)
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
+  }
+  // Auto-detect: if we're on Vercel, use Render backend; otherwise use localhost
+  if (window.location.hostname.includes('vercel.app')) {
+    return 'https://sperm-racing-gene-summon.onrender.com';
+  }
+  // Default to localhost for local development
+  return 'http://localhost:5000';
+};
+
+const API_BASE_URL = getApiBaseUrl();
+
 /**
  * Summon a card from the backend API
  * @param {string|null} capsuleTier - The tier of capsule to summon (Common, Rare, Epic, Mythic)
@@ -7,7 +23,7 @@
 export async function summonCard(capsuleTier = null) {
   if (capsuleTier) {
     // Use POST with capsuleTier
-    const res = await fetch("http://localhost:5000/api/summon", {
+    const res = await fetch(`${API_BASE_URL}/api/summon`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -39,7 +55,7 @@ export async function summonCard(capsuleTier = null) {
  * @throws {Error} If API call fails
  */
 export async function runRace() {
-  const res = await fetch("http://localhost:5000/api/race", {
+  const res = await fetch(`${API_BASE_URL}/api/race`, {
     method: "GET",
   });
   if (!res.ok) {

@@ -5,7 +5,25 @@ import { weightedRandomSelect } from "./utils/random.js";
 
 const app = express();
 app.use(express.json());
-app.use(cors({ origin: "http://localhost:5173" }));
+
+// CORS configuration - allow both production (Vercel) and local development
+const allowedOrigins = [
+  "https://sperm-racing-gene-summon.vercel.app",
+  "http://localhost:5173",
+  "http://localhost:5174", // Vite sometimes uses 5174 if 5173 is taken
+];
+
+app.use(cors({
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps, Postman, or same-origin requests)
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
+  credentials: true,
+}));
 
 // ✅ Helper to determine capsule tier from race performance
 function determineCapsuleTier(velocity, motility, linearity) {
@@ -52,4 +70,5 @@ app.post("/api/summon", (req, res) => {
   }
 });
 
-app.listen(5000, () => console.log("🚀 Backend running on port 5000"));
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => console.log(`🚀 Backend running on port ${PORT}`));
