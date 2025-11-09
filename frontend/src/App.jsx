@@ -18,15 +18,32 @@ function App() {
   // Race simulation state
   const [raceResult, setRaceResult] = useState(null);
   const [runningRace, setRunningRace] = useState(false);
+  
+  // Spermdex view mode state
+  const [viewMode, setViewMode] = useState("summon"); // "summon" or "spermdex"
+  const [selectedSperm, setSelectedSperm] = useState(null); // For modal details
 
   async function handleRunRace() {
     // Clear previous card and race result when starting a new race
     setCard(null);
     setRaceResult(null);
     setRunningRace(true);
+    
+    // Minimum display time for loader (ensures it's visible)
+    const minDisplayTime = 1500; // 1.5 seconds
+    const startTime = Date.now();
+    
     try {
       const result = await runRace();
       if (result && result.capsuleTier) {
+        console.log("Race result:", result);
+        
+        // Ensure loader shows for minimum time
+        const elapsed = Date.now() - startTime;
+        const remainingTime = Math.max(0, minDisplayTime - elapsed);
+        
+        await new Promise(resolve => setTimeout(resolve, remainingTime));
+        
         setRaceResult(result);
       } else {
         console.error("Invalid race result:", result);
@@ -34,7 +51,7 @@ function App() {
       }
     } catch (error) {
       console.error("Race simulation failed:", error);
-      alert("Failed to connect to race endpoint. Please check if the backend is running on port 4000.");
+      alert(`Failed to connect to race endpoint. Please check if the backend is running on port 5000.\n\nError: ${error.message}`);
     } finally {
       setRunningRace(false);
     }
@@ -90,9 +107,21 @@ function App() {
       const rarityGlow = glowColorMap[data.rarity] || "#ffffff";
       setGlowColor(rarityGlow);
   
+      // Save to collection with proper format
+      const spermData = {
+        name: data.name,
+        emoji: data.emoji || "🧬",
+        trait: data.trait || data.quote || "",
+        flavorText: data.flavorText || data.quote || "",
+        rarity: data.rarity,
+        stats: data.stats || {},
+        quote: data.quote || data.flavorText || "", // Keep quote for compatibility
+      };
+      
       setCollection((prev) => {
-        const updated = [...prev, data];
+        const updated = [...prev, spermData];
         localStorage.setItem("spermdex", JSON.stringify(updated));
+        console.log("Saved to spermdex:", spermData);
         return updated;
       });
 
@@ -121,6 +150,7 @@ function App() {
     if (card && !opening) {
       const glowColorMap = {
         Legendary: "#ffd700",
+        Mythic: "#ffd700",
         Epic: "#b388ff",
         Rare: "#64b5f6",
         Common: "#b0bec5",
@@ -138,16 +168,63 @@ function App() {
       Rare: "#64b5f6", // Blue - medium
       Common: "#b0bec5", // Silver - dim
     };
-    return glowColorMap[rarity] || "#b0bec5"; // Default to Common (silver) if rarity not found
+    // Normalize rarity (handle both Legendary and Mythic)
+    const normalizedRarity = rarity === "Legendary" ? "Mythic" : rarity;
+    return glowColorMap[normalizedRarity] || glowColorMap[rarity] || "#b0bec5"; // Default to Common (silver) if rarity not found
+  }
+
+  // Full sperm list from backend (reference data)
+  const allSperms = {
+    Common: [
+      { name: "Lazy Larry", quote: "Still deciding which way the egg is." },
+      { name: "Drifty Dave", quote: "Just vibin' in the vas deferens." },
+      { name: "Timid Timmy", quote: "Refuses to swim without floaties." },
+      { name: "No-Tail Neil", quote: "Technically still participating." },
+      { name: "Bubble Boy", quote: "Too much caffeine, not enough direction." }
+    ],
+    Rare: [
+      { name: "Turbo Tom", quote: "Born to spin." },
+      { name: "Captain Wiggle", quote: "Motility is my middle name." },
+      { name: "Benny Biflagella", quote: "Two tails. Double trouble." },
+      { name: "Zoomin' Zane", quote: "Has never touched a wall — yet." },
+      { name: "Backstroke Barry", quote: "Invented the freestyle for sperm." }
+    ],
+    Epic: [
+      { name: "Professor Wiggle", quote: "Theoretical physicist of the testes." },
+      { name: "Slick Rick", quote: "No egg too far, no rival too fast." },
+      { name: "Don Juan de Swim", quote: "Flirts with every ovum in sight." },
+      { name: "Hydro Harold", quote: "Powered by electrolytes and ambition." },
+      { name: "Mitochondrius Maximus", quote: "All power. No mercy." }
+    ],
+    Mythic: [
+      { name: "The Chosen One (Swimothy)", quote: "Prophecy foretold: one shall reach the egg." },
+      { name: "Genezilla", quote: "Mutated beyond mortal means." },
+      { name: "Wiggly Stardust", quote: "A swimmer from beyond the stars." },
+      { name: "Aqua Saiyan", quote: "Has achieved Ultra Instinct Motility." },
+      { name: "Professor Fertilis", quote: "Has seen the egg… and returned." }
+    ]
+  };
+
+  // Helper to check if a sperm is collected
+  function isSpermCollected(rarity, name) {
+    return collection.some(c => c.rarity === rarity && c.name === name);
+  }
+
+  // Get collected count for a rarity
+  function getCollectedCount(rarity) {
+    const collected = collection.filter(c => c.rarity === rarity).length;
+    const total = allSperms[rarity]?.length || 0;
+    return { collected, total };
   }
 
   function getRarityEffect(rarity) {
     switch (rarity) {
       case "Legendary":
+      case "Mythic":
         return {
           background: "radial-gradient(circle, rgba(255,215,0,0.3), transparent 70%)",
           color: "gold",
-          text: "🌟 LEGENDARY DROP! 🌟",
+          text: "🌟 MYTHIC DROP! 🌟",
         };
       case "Epic":
         return {
@@ -164,7 +241,7 @@ function App() {
       default:
         return null;
     }
-  }  
+  }
 
   return (
     <div
@@ -194,41 +271,71 @@ function App() {
         backgroundClip: "text",
       }}>🧬 Gene Summon Mode</h1>
 
+      {/* View Toggle Buttons */}
+      <div style={{ 
+        display: "flex", 
+        gap: "15px", 
+        marginBottom: "30px",
+        justifyContent: "center",
+      }}>
+        <motion.button
+          onClick={() => setViewMode("summon")}
+          className="gradient-button"
+          whileHover={{ scale: 1.05, y: -2 }}
+          whileTap={{ scale: 0.98 }}
+          style={{
+            padding: "12px 24px",
+            fontSize: "1rem",
+            borderRadius: "12px",
+            background: viewMode === "summon" 
+              ? "linear-gradient(135deg, #9333ea 0%, #64b5f6 100%)"
+              : "linear-gradient(135deg, #666 0%, #444 100%)",
+            opacity: viewMode === "summon" ? 1 : 0.7,
+          }}
+        >
+          🧬 Summon
+        </motion.button>
+        <motion.button
+          onClick={() => setViewMode("spermdex")}
+          className="gradient-button"
+          whileHover={{ scale: 1.05, y: -2 }}
+          whileTap={{ scale: 0.98 }}
+          style={{
+            padding: "12px 24px",
+            fontSize: "1rem",
+            borderRadius: "12px",
+            background: viewMode === "spermdex"
+              ? "linear-gradient(135deg, #9333ea 0%, #64b5f6 100%)"
+              : "linear-gradient(135deg, #666 0%, #444 100%)",
+            opacity: viewMode === "spermdex" ? 1 : 0.7,
+          }}
+        >
+          📘 Spermdex ({collection.length})
+        </motion.button>
+      </div>
+
+      {/* Summon View */}
+      {viewMode === "summon" && (
+        <>
       {/* Race Simulation Section */}
-      {!opening && (
-        <div style={{ marginBottom: "40px", width: "100%", maxWidth: "600px" }}>
-          <motion.button
-            onClick={handleRunRace}
-            disabled={runningRace || opening}
-            className="gradient-button"
-            whileHover={!runningRace ? { scale: 1.05, y: -2 } : {}}
-            whileTap={!runningRace ? { scale: 0.98 } : {}}
+      <div style={{ marginBottom: "40px", width: "100%", maxWidth: "600px" }}>
+        {/* Animated loader during race simulation - Show even during opening */}
+        {runningRace && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.3 }}
+            className="glass-card"
             style={{
-              padding: "14px 28px",
-              fontSize: "1.1rem",
-              borderRadius: "12px",
+              padding: "30px",
+              borderRadius: "16px",
               marginBottom: "20px",
-              opacity: runningRace ? 0.6 : 1,
-              cursor: runningRace ? "not-allowed" : "pointer",
+              textAlign: "center",
+              position: "relative",
+              zIndex: 10,
             }}
           >
-            {runningRace ? "Analyzing..." : "🏃 Run Race"}
-          </motion.button>
-
-          {/* Animated loader during race simulation */}
-          {runningRace && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="glass-card"
-              style={{
-                padding: "30px",
-                borderRadius: "16px",
-                marginBottom: "20px",
-                textAlign: "center",
-              }}
-            >
               <motion.div
                 animate={{ rotate: 360 }}
                 transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
@@ -261,7 +368,28 @@ function App() {
             </motion.div>
           )}
 
-          {raceResult && (
+        {/* Run Race Button - Only show when no race result and no card and not running */}
+        {!opening && !raceResult && !card && !runningRace && (
+          <motion.button
+            onClick={handleRunRace}
+            disabled={runningRace || opening}
+            className="gradient-button"
+            whileHover={!runningRace ? { scale: 1.05, y: -2 } : {}}
+            whileTap={!runningRace ? { scale: 0.98 } : {}}
+            style={{
+              padding: "14px 28px",
+              fontSize: "1.1rem",
+              borderRadius: "12px",
+              marginBottom: "20px",
+              opacity: runningRace ? 0.6 : 1,
+              cursor: runningRace ? "not-allowed" : "pointer",
+            }}
+          >
+            🏃 Run Race
+          </motion.button>
+        )}
+
+        {!opening && raceResult && (
             <motion.div
               initial={{ opacity: 0, y: 30, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -371,7 +499,8 @@ function App() {
             </motion.div>
           )}
 
-          {raceResult && (
+          {/* Sequence Capsule Button - Only show when race result exists but no card yet */}
+          {raceResult && !card && (
             <div style={{ display: "flex", gap: "10px", justifyContent: "center", marginBottom: "20px" }}>
               <motion.button
                 onClick={() => handleSummon(raceResult.capsuleTier)}
@@ -394,14 +523,14 @@ function App() {
                   setRaceResult(null);
                   setCard(null);
                 }}
-                disabled={opening}
+        disabled={opening}
                 className="gradient-button"
                 whileHover={!opening ? { scale: 1.05, y: -2 } : {}}
                 whileTap={!opening ? { scale: 0.98 } : {}}
-                style={{
+        style={{
                   padding: "14px 20px",
                   fontSize: "1rem",
-                  borderRadius: "12px",
+          borderRadius: "12px",
                   opacity: opening ? 0.6 : 1,
                   cursor: opening ? "not-allowed" : "pointer",
                   background: "linear-gradient(135deg, #666 0%, #444 100%)",
@@ -412,7 +541,6 @@ function App() {
             </div>
           )}
         </div>
-      )}
   
       {/* 🧬 DNA Capsule Animation - Premium buildup */}
       {opening && (
@@ -476,7 +604,7 @@ function App() {
           />
         </motion.div>
       )}
-      
+
       {/* Legacy 💧 Animation (hidden but kept for compatibility) */}
       {false && (
         <motion.div
@@ -525,26 +653,6 @@ function App() {
         </motion.div>
       )}
 
-      {/* Show button when no card is shown and no race result (backward compatibility) */}
-      {!card && !opening && !raceResult && (
-        <motion.button
-          onClick={() => handleSummon()}
-          disabled={opening}
-          className="gradient-button"
-          whileHover={{ scale: 1.05, y: -2 }}
-          whileTap={{ scale: 0.98 }}
-          style={{
-            padding: "14px 28px",
-            fontSize: "1.2rem",
-            borderRadius: "12px",
-            marginTop: "20px",
-          }}
-        >
-          Open Gene Capsule 💧
-        </motion.button>
-      )}
-  
-
       {/* 💫 Rarity Reveal Overlay */}
     {!opening && card && getRarityEffect(card.rarity) && (
       <motion.div
@@ -572,13 +680,13 @@ function App() {
       </motion.div>
     )}
 
-    {!opening && card && ["Legendary", "Epic"].includes(card.rarity) && (
-      <ParticleBurst color={card.rarity === "Legendary" ? "gold" : "#b388ff"} />
+    {!opening && card && ["Legendary", "Mythic", "Epic"].includes(card.rarity) && (
+      <ParticleBurst color={card.rarity === "Legendary" || card.rarity === "Mythic" ? "gold" : "#b388ff"} />
     )}
 
 
       {!opening && card && (
-          <motion.div
+        <motion.div
           initial={{ opacity: 0, scale: 0.7, y: 50, rotateX: -15 }}
           animate={{
             opacity: 1,
@@ -601,9 +709,9 @@ function App() {
             transition: { duration: 0.3 }
           }}
           className="glass-card"
-          style={{
-            marginTop: "50px",
-            display: "inline-block",
+        style={{
+          marginTop: "50px",
+          display: "inline-block",
             borderRadius: "24px",
             padding: "40px 50px",
             border: `3px solid ${getRarityColor(card.rarity)}`,
@@ -755,215 +863,364 @@ function App() {
         </motion.div>
       )}
 
-      {/* 🎮 Button - placed under the card (consistent gradient) */}
-      {!opening && card && !raceResult && (
+      {/* Reset button after card is revealed (allows starting new flow) */}
+      {!opening && card && raceResult && (
         <motion.button
-          onClick={() => handleSummon()}
-          disabled={opening}
+          onClick={() => {
+            setCard(null);
+            setRaceResult(null);
+          }}
           className="gradient-button"
           whileHover={{ scale: 1.05, y: -2 }}
           whileTap={{ scale: 0.98 }}
           style={{
             marginTop: "40px",
             padding: "14px 28px",
-            fontSize: "1.2rem",
+            fontSize: "1.1rem",
             borderRadius: "12px",
+            background: "linear-gradient(135deg, #666 0%, #444 100%)",
           }}
         >
-          Open Gene Capsule 💧
+          Start New Summon
         </motion.button>
       )}
 
+        </>
+      )}
 
-      {collection.length > 0 && (
-        <div style={{ marginTop: "60px", width: "100%", maxWidth: "1200px" }}>
-          <button
-            onClick={() => setShowCollection(!showCollection)}
-            className="glass"
-            style={{
-              padding: "12px 24px",
-              fontSize: "1rem",
-              borderRadius: "12px",
-              border: "1px solid rgba(255,255,255,0.1)",
-              color: "white",
-              cursor: "pointer",
-              marginBottom: "20px",
-              fontFamily: "'Poppins', sans-serif",
-              fontWeight: 500,
-              transition: "all 0.3s ease",
-            }}
-            onMouseEnter={(e) => {
-              e.target.style.background = "rgba(255,255,255,0.12)";
-              e.target.style.boxShadow = "0 8px 32px 0 rgba(0, 0, 0, 0.4), 0 0 20px rgba(168, 85, 247, 0.2)";
-            }}
-            onMouseLeave={(e) => {
-              e.target.style.background = "rgba(255,255,255,0.05)";
-              e.target.style.boxShadow = "0 8px 32px 0 rgba(0, 0, 0, 0.37), 0 0 20px rgba(168, 85, 247, 0.1)";
-            }}
-          >
-            {showCollection ? "▼" : "▶"} 📘 Spermdex Collection ({collection.length})
-          </button>
-          
-          {showCollection && (
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="glass-card" 
-              style={{
-                maxHeight: "500px",
-                overflowY: "auto",
-                padding: "24px",
-                borderRadius: "20px",
-              }}
-            >
-              <div
+      {/* Spermdex Collection View */}
+      {viewMode === "spermdex" && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          style={{
+            width: "100%",
+            maxWidth: "1400px",
+            padding: "20px",
+          }}
+        >
+          <h2 style={{
+            fontFamily: "'Orbitron', sans-serif",
+            fontSize: "2.5rem",
+            marginBottom: "30px",
+            textAlign: "center",
+            background: "linear-gradient(135deg, #ffffff 0%, #a855f7 100%)",
+            WebkitBackgroundClip: "text",
+            WebkitTextFillColor: "transparent",
+            backgroundClip: "text",
+          }}>
+            📘 Spermdex Collection
+          </h2>
+
+          {/* Rarity Sections */}
+          {["Mythic", "Epic", "Rare", "Common"].map((rarity) => {
+            const { collected, total } = getCollectedCount(rarity);
+            const raritySperms = allSperms[rarity] || [];
+            
+            return (
+              <motion.div
+                key={rarity}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: ["Mythic", "Epic", "Rare", "Common"].indexOf(rarity) * 0.1 }}
                 style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))",
-                  gap: "18px",
+                  marginBottom: "40px",
                 }}
               >
-                {collection.map((c, i) => {
-                  const isMythic = c.rarity === "Legendary" || c.rarity === "Mythic";
-                  return (
-                    <motion.div
-                      key={i}
-                      initial={{ opacity: 0, scale: 0.8 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ delay: i * 0.05 }}
-                      whileHover={{ scale: 1.08, y: -5, z: 10 }}
-                      className="glass"
-                      style={{
-                        border: `2px solid ${getRarityColor(c.rarity)}`,
-                        borderRadius: "16px",
-                        padding: "16px",
-                        textAlign: "center",
-                        position: "relative",
-                        cursor: "pointer",
-                        boxShadow: `0 4px 20px ${getRarityColor(c.rarity)}44`,
-                        overflow: "visible",
-                      }}
-                      onMouseEnter={(e) => {
-                        const tooltip = e.currentTarget.querySelector('.card-tooltip');
-                        if (tooltip) {
-                          tooltip.style.opacity = '1';
-                          tooltip.style.transform = 'translateX(-50%) translateY(0) scale(1)';
-                        }
-                      }}
-                      onMouseLeave={(e) => {
-                        const tooltip = e.currentTarget.querySelector('.card-tooltip');
-                        if (tooltip) {
-                          tooltip.style.opacity = '0';
-                          tooltip.style.transform = 'translateX(-50%) translateY(10px) scale(0.8)';
-                        }
-                      }}
-                    >
-                      {/* Shimmer effect for Mythic cards - Optimized */}
-                      {isMythic && (
-                        <motion.div
-                          animate={{
-                            x: ["-100%", "200%"],
-                          }}
-                          transition={{
-                            duration: 4,
-                            repeat: Infinity,
-                            ease: "linear",
-                            repeatDelay: 2,
-                          }}
-                          style={{
+                {/* Rarity Header */}
+                <div style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginBottom: "20px",
+                  padding: "15px 20px",
+                  background: `linear-gradient(135deg, ${getRarityColor(rarity)}22, transparent)`,
+                  borderRadius: "12px",
+                  border: `2px solid ${getRarityColor(rarity)}44`,
+                }}>
+                  <h3 style={{
+                    fontFamily: "'Orbitron', sans-serif",
+                    fontSize: "1.8rem",
+                    color: getRarityColor(rarity),
+                    textShadow: `0 0 10px ${getRarityColor(rarity)}66`,
+                    margin: 0,
+                  }}>
+                    {rarity}
+                  </h3>
+                  <p style={{
+                    fontFamily: "'Poppins', sans-serif",
+                    fontSize: "1rem",
+                    opacity: 0.8,
+                    margin: 0,
+                  }}>
+                    Collected: {collected}/{total}
+                  </p>
+                </div>
+
+                {/* Sperm Cards Grid */}
+                <div style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))",
+                  gap: "20px",
+                }}>
+                  {raritySperms.map((sperm, idx) => {
+                    const isCollected = isSpermCollected(rarity, sperm.name);
+                    const collectedData = collection.find(c => c.rarity === rarity && c.name === sperm.name);
+                    
+                    return (
+                      <motion.div
+                        key={sperm.name}
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: idx * 0.05 }}
+                        whileHover={{ scale: 1.05, y: -5 }}
+                        onClick={() => isCollected && setSelectedSperm(collectedData)}
+                        className="glass"
+                        style={{
+                          border: `2px solid ${isCollected ? getRarityColor(rarity) : "rgba(255,255,255,0.1)"}`,
+                          borderRadius: "16px",
+                          padding: "20px",
+                          textAlign: "center",
+                          cursor: isCollected ? "pointer" : "default",
+                          position: "relative",
+                          opacity: isCollected ? 1 : 0.4,
+                          filter: isCollected ? "none" : "grayscale(100%) blur(2px)",
+                          boxShadow: isCollected 
+                            ? `0 4px 20px ${getRarityColor(rarity)}44`
+                            : "0 4px 20px rgba(0,0,0,0.2)",
+                        }}
+                      >
+                        {/* Locked Overlay */}
+                        {!isCollected && (
+                          <div style={{
                             position: "absolute",
                             top: 0,
                             left: 0,
-                            width: "50%",
-                            height: "100%",
-                            background: `linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.25), transparent)`,
-                            pointerEvents: "none",
+                            right: 0,
+                            bottom: 0,
+                            background: "rgba(0, 0, 0, 0.7)",
                             borderRadius: "16px",
-                            willChange: "transform",
-                          }}
-                        />
-                      )}
-                      
-                      <div style={{ fontSize: "36px", marginBottom: "10px" }}>{c.emoji}</div>
-                      <p style={{ 
-                        margin: "6px 0", 
-                        fontWeight: 600, 
-                        fontSize: "0.95rem", 
-                        fontFamily: "'Poppins', sans-serif",
-                        color: "#ffffff",
-                      }}>
-                        {c.name}
-                      </p>
-                      <p style={{ 
-                        fontSize: "0.75rem", 
-                        opacity: 0.9, 
-                        color: getRarityColor(c.rarity),
-                        fontFamily: "'Orbitron', sans-serif",
-                        fontWeight: 600,
-                        letterSpacing: "0.5px",
-                      }}>
-                        {c.rarity}
-                      </p>
-                      
-                      {/* Hover Tooltip */}
-                      <div
-                        className="card-tooltip"
-                        style={{
-                          position: "absolute",
-                          bottom: "calc(100% + 10px)",
-                          left: "50%",
-                          transform: "translateX(-50%) translateY(10px)",
-                          background: "rgba(0, 0, 0, 0.95)",
-                          backdropFilter: "blur(10px)",
-                          padding: "12px 16px",
-                          borderRadius: "12px",
-                          border: `2px solid ${getRarityColor(c.rarity)}`,
-                          minWidth: "200px",
-                          maxWidth: "250px",
-                          pointerEvents: "none",
-                          zIndex: 1000,
-                          boxShadow: `0 8px 32px rgba(0, 0, 0, 0.5), 0 0 20px ${getRarityColor(c.rarity)}44`,
-                          opacity: 0,
-                          transform: "translateX(-50%) translateY(10px) scale(0.8)",
-                          transition: "all 0.3s ease",
-                        }}
-                      >
-                        <p style={{ 
-                          fontSize: "0.85rem", 
-                          opacity: 0.8, 
-                          marginBottom: "8px",
-                          fontStyle: "italic",
-                          whiteSpace: "normal",
-                        }}>
-                          {c.flavorText}
-                        </p>
-                        {c.stats && (
-                          <div style={{ 
-                            display: "grid", 
-                            gridTemplateColumns: "repeat(2, 1fr)", 
-                            gap: "8px",
-                            marginTop: "8px",
-                            paddingTop: "8px",
-                            borderTop: `1px solid ${getRarityColor(c.rarity)}33`,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            zIndex: 1,
                           }}>
-                            {Object.entries(c.stats).map(([key, value]) => (
-                              <div key={key}>
-                                <p style={{ fontSize: "0.7rem", opacity: 0.7, marginBottom: "2px" }}>{key}</p>
-                                <p style={{ fontSize: "0.9rem", fontWeight: 600, color: getRarityColor(c.rarity) }}>
-                                  {value}
-                                </p>
-                              </div>
-                            ))}
+                            <p style={{
+                              fontSize: "2rem",
+                              opacity: 0.5,
+                              fontFamily: "'Orbitron', sans-serif",
+                            }}>
+                              ???
+                            </p>
                           </div>
                         )}
-                      </div>
-                    </motion.div>
-                  );
-                })}
+
+                        {/* Shimmer for Mythic collected cards */}
+                        {isCollected && rarity === "Mythic" && (
+                          <motion.div
+                            animate={{ x: ["-100%", "200%"] }}
+                            transition={{ duration: 4, repeat: Infinity, ease: "linear", repeatDelay: 2 }}
+                            style={{
+                              position: "absolute",
+                              top: 0,
+                              left: 0,
+                              width: "50%",
+                              height: "100%",
+                              background: "linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.25), transparent)",
+                              pointerEvents: "none",
+                              borderRadius: "16px",
+                              willChange: "transform",
+                            }}
+                          />
+                        )}
+
+                        <div style={{ 
+                          fontSize: "48px", 
+                          marginBottom: "12px",
+                          filter: isCollected ? "none" : "blur(3px)",
+                        }}>
+                          {isCollected ? (collectedData?.emoji || "🧬") : "🧬"}
+                        </div>
+                        <p style={{
+                          margin: "8px 0",
+                          fontWeight: 600,
+                          fontSize: "1rem",
+                          fontFamily: "'Poppins', sans-serif",
+                          color: isCollected ? "#ffffff" : "rgba(255,255,255,0.3)",
+                          filter: isCollected ? "none" : "blur(2px)",
+                        }}>
+                          {isCollected ? sperm.name : "???"}
+                        </p>
+                        {isCollected && (
+                          <p style={{
+                            fontSize: "0.75rem",
+                            opacity: 0.9,
+                            color: getRarityColor(rarity),
+                            fontFamily: "'Orbitron', sans-serif",
+                            fontWeight: 600,
+                            letterSpacing: "0.5px",
+                            marginTop: "8px",
+                          }}>
+                            {rarity}
+                          </p>
+                        )}
+                      </motion.div>
+                    );
+                  })}
+                </div>
+              </motion.div>
+            );
+          })}
+        </motion.div>
+      )}
+
+      {/* Sperm Details Modal */}
+      {selectedSperm && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          onClick={() => setSelectedSperm(null)}
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "rgba(0, 0, 0, 0.8)",
+            backdropFilter: "blur(10px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 2000,
+            padding: "20px",
+          }}
+        >
+          <motion.div
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.8, opacity: 0 }}
+            onClick={(e) => e.stopPropagation()}
+            className="glass-card"
+            style={{
+              maxWidth: "500px",
+              width: "100%",
+              padding: "40px",
+              borderRadius: "24px",
+              border: `3px solid ${getRarityColor(selectedSperm.rarity)}`,
+              boxShadow: `0 0 60px ${getRarityColor(selectedSperm.rarity)}66`,
+            }}
+          >
+            <button
+              onClick={() => setSelectedSperm(null)}
+              style={{
+                position: "absolute",
+                top: "15px",
+                right: "15px",
+                background: "rgba(255,255,255,0.1)",
+                border: "none",
+                borderRadius: "50%",
+                width: "35px",
+                height: "35px",
+                color: "white",
+                cursor: "pointer",
+                fontSize: "1.2rem",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              ×
+            </button>
+
+            <div style={{ textAlign: "center", marginBottom: "20px" }}>
+              <div style={{ fontSize: "64px", marginBottom: "15px" }}>
+                {selectedSperm.emoji || "🧬"}
               </div>
-            </motion.div>
-          )}
-        </div>
+              <h2 style={{
+                fontSize: "32px",
+                fontFamily: "'Orbitron', sans-serif",
+                fontWeight: 700,
+                marginBottom: "10px",
+                background: `linear-gradient(135deg, #ffffff 0%, ${getRarityColor(selectedSperm.rarity)} 100%)`,
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                backgroundClip: "text",
+              }}>
+                {selectedSperm.name}
+              </h2>
+              <motion.div
+                style={{
+                  display: "inline-block",
+                  padding: "6px 16px",
+                  borderRadius: "20px",
+                  background: `linear-gradient(135deg, ${getRarityColor(selectedSperm.rarity)}dd, ${getRarityColor(selectedSperm.rarity)}aa)`,
+                  border: `2px solid ${getRarityColor(selectedSperm.rarity)}`,
+                  marginBottom: "15px",
+                }}
+              >
+                <p style={{
+                  fontSize: "0.85rem",
+                  fontWeight: 700,
+                  color: "#ffffff",
+                  fontFamily: "'Orbitron', sans-serif",
+                  letterSpacing: "1px",
+                  margin: 0,
+                }}>
+                  {selectedSperm.rarity.toUpperCase()}
+                </p>
+              </motion.div>
+            </div>
+
+            <p style={{
+              fontSize: "1.1rem",
+              fontStyle: "italic",
+              opacity: 0.85,
+              textAlign: "center",
+              marginBottom: "25px",
+              fontFamily: "'Poppins', sans-serif",
+              lineHeight: 1.6,
+            }}>
+              "{selectedSperm.quote || selectedSperm.flavorText || selectedSperm.trait || "No quote available"}"
+            </p>
+
+            {selectedSperm.stats && (
+              <div style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(2, 1fr)",
+                gap: "15px",
+                padding: "20px",
+                background: "rgba(0, 0, 0, 0.2)",
+                borderRadius: "12px",
+                border: `1px solid ${getRarityColor(selectedSperm.rarity)}33`,
+              }}>
+                {Object.entries(selectedSperm.stats).map(([key, value]) => (
+                  <div key={key} style={{ textAlign: "center" }}>
+                    <p style={{
+                      fontSize: "0.75rem",
+                      opacity: 0.7,
+                      marginBottom: "5px",
+                      fontFamily: "'Poppins', sans-serif",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.5px",
+                    }}>
+                      {key}
+                    </p>
+                    <p style={{
+                      fontSize: "1.5rem",
+                      fontWeight: 600,
+                      color: getRarityColor(selectedSperm.rarity),
+                      fontFamily: "'Orbitron', sans-serif",
+                    }}>
+                      {value}
+                    </p>
+                  </div>
+                ))}
+          </div>
+            )}
+          </motion.div>
+        </motion.div>
       )}
     </div>
   );
