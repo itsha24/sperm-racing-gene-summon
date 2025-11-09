@@ -69,17 +69,16 @@ function App() {
     document.body.style.transition = "none"; // No transitions on background
     
     setOpening(true);
-    setGlowColor("#b0bec5"); // Start with Common (silver) glow - creates anticipation
+    setGlowColor("#9ca3af");
     const data = await summonCard(capsuleTier);
   
-    const revealDelay = 3000; // Longer, more cinematic timing
-  
-    // Rarity glow colors (brightness scales with rarity)
+    const revealDelay = 3000;
     const glowColorMap = {
-      Legendary: "#ffd700", // Gold - brightest
-      Epic: "#b388ff", // Purple - bright
-      Rare: "#64b5f6", // Blue - medium
-      Common: "#b0bec5", // Silver - dim
+      Common: "#9ca3af",
+      Rare: "#3b82f6",
+      Epic: "#8b5cf6",
+      Mythic: "#facc15",
+      Legendary: "#facc15",
     };
 
     // Glow intensity multipliers (for brightness scaling)
@@ -125,9 +124,8 @@ function App() {
         return updated;
       });
 
-      // Reset glow after 4 seconds (longer for cinematic feel)
       const timeout3 = setTimeout(() => {
-        setGlowColor("#b0bec5"); // Reset to Common (silver) - default anticipation color
+        setGlowColor("#9ca3af");
       }, 4000);
       timeoutRefs.current.push(timeout3);
     }, revealDelay);
@@ -141,36 +139,58 @@ function App() {
     document.body.style.transition = "none";
     
     if (!card && !opening) {
-      setGlowColor("#b0bec5"); // Reset to Common (silver) - default anticipation color
+      setGlowColor("#9ca3af");
     }
   }, [card, opening]);
 
-  // Set glow color based on card rarity when displayed
   useEffect(() => {
     if (card && !opening) {
       const glowColorMap = {
-        Legendary: "#ffd700",
-        Mythic: "#ffd700",
-        Epic: "#b388ff",
-        Rare: "#64b5f6",
-        Common: "#b0bec5",
+        Common: "#9ca3af",
+        Rare: "#3b82f6",
+        Epic: "#8b5cf6",
+        Mythic: "#facc15",
+        Legendary: "#facc15",
       };
-      setGlowColor(glowColorMap[card.rarity] || "#b0bec5");
+      setGlowColor(glowColorMap[card.rarity] || glowColorMap.Common);
     }
   }, [card, opening]);
   
 
   function getRarityColor(rarity) {
-    const glowColorMap = {
-      Legendary: "#ffd700", // Gold - brightest
-      Mythic: "#ffd700", // Mythic uses same as Legendary
-      Epic: "#b388ff", // Purple - bright
-      Rare: "#64b5f6", // Blue - medium
-      Common: "#b0bec5", // Silver - dim
+    const colorMap = {
+      Common: "#9ca3af",   // Gray
+      Rare: "#3b82f6",     // Blue
+      Epic: "#8b5cf6",     // Purple
+      Mythic: "#facc15",   // Gold
+      Legendary: "#facc15", // Legendary uses same as Mythic
     };
-    // Normalize rarity (handle both Legendary and Mythic)
     const normalizedRarity = rarity === "Legendary" ? "Mythic" : rarity;
-    return glowColorMap[normalizedRarity] || glowColorMap[rarity] || "#b0bec5"; // Default to Common (silver) if rarity not found
+    return colorMap[normalizedRarity] || colorMap[rarity] || colorMap.Common;
+  }
+
+  function getRarityIcon(rarity) {
+    const iconMap = {
+      Common: "⚪",
+      Rare: "🔵",
+      Epic: "🟣",
+      Mythic: "🟡",
+      Legendary: "🟡",
+    };
+    const normalizedRarity = rarity === "Legendary" ? "Mythic" : rarity;
+    return iconMap[normalizedRarity] || iconMap[rarity] || iconMap.Common;
+  }
+
+  function getRarityGradient(rarity) {
+    const gradientMap = {
+      Common: "linear-gradient(135deg, rgba(156, 163, 175, 0.2) 0%, transparent 100%)",
+      Rare: "linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, transparent 100%)",
+      Epic: "linear-gradient(135deg, rgba(139, 92, 246, 0.2) 0%, transparent 100%)",
+      Mythic: "linear-gradient(135deg, rgba(250, 204, 21, 0.2) 0%, transparent 100%)",
+      Legendary: "linear-gradient(135deg, rgba(250, 204, 21, 0.2) 0%, transparent 100%)",
+    };
+    const normalizedRarity = rarity === "Legendary" ? "Mythic" : rarity;
+    return gradientMap[normalizedRarity] || gradientMap[rarity] || gradientMap.Common;
   }
 
   // Full sperm list from backend (reference data)
@@ -653,32 +673,52 @@ function App() {
         </motion.div>
       )}
 
-      {/* 💫 Rarity Reveal Overlay */}
-    {!opening && card && getRarityEffect(card.rarity) && (
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: [0, 1, 0] }}
-        transition={{ duration: 2 }}
-        style={{
-          position: "fixed",
-          top: 0,
-          left: 0,
-          width: "100vw",
-          height: "100vh",
-          background: getRarityEffect(card.rarity).background,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          color: getRarityEffect(card.rarity).color,
-          fontSize: "2rem",
-          fontWeight: "bold",
-          pointerEvents: "none",
-          zIndex: 1000,
-        }}
-      >
-        {getRarityEffect(card.rarity).text}
-      </motion.div>
-    )}
+      {!opening && card && getRarityEffect(card.rarity) && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: [0, 1, 0] }}
+          transition={{ duration: 2 }}
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100vw",
+            height: "100vh",
+            background: getRarityEffect(card.rarity).background,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            color: getRarityEffect(card.rarity).color,
+            fontSize: "2rem",
+            fontWeight: "bold",
+            pointerEvents: "none",
+            zIndex: 1000,
+          }}
+        >
+          {getRarityEffect(card.rarity).text}
+        </motion.div>
+      )}
+
+      {!opening && card && (
+        <motion.div
+        initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: [0, 0.4, 0] }}
+          transition={{ duration: 1.5, ease: "easeOut" }}
+          style={{
+            position: "fixed",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            width: "600px",
+            height: "600px",
+            borderRadius: "50%",
+            background: `radial-gradient(circle, ${getRarityColor(card.rarity)}33 0%, transparent 70%)`,
+            pointerEvents: "none",
+            zIndex: 998,
+            filter: `blur(40px)`,
+          }}
+        />
+      )}
 
     {!opening && card && ["Legendary", "Mythic", "Epic"].includes(card.rarity) && (
       <ParticleBurst color={card.rarity === "Legendary" || card.rarity === "Mythic" ? "gold" : "#b388ff"} />
@@ -717,15 +757,16 @@ function App() {
             border: `3px solid ${getRarityColor(card.rarity)}`,
             boxShadow: `
               0 0 40px ${getRarityColor(card.rarity)}66,
+              0 0 80px ${getRarityColor(card.rarity)}33,
               0 20px 60px rgba(0, 0, 0, 0.4)
             `,
             position: "relative",
             maxWidth: "500px",
             transformStyle: "preserve-3d",
             willChange: "transform",
+            background: `linear-gradient(135deg, rgba(0, 0, 0, 0.4) 0%, rgba(0, 0, 0, 0.6) 100%)`,
           }}
         >
-          {/* Rarity glow bloom effect - Optimized */}
           <motion.div
             animate={{
               opacity: [0.3, 0.5, 0.3],
@@ -749,6 +790,38 @@ function App() {
               willChange: "transform, opacity",
             }}
           />
+          {card.rarity === "Mythic" && (
+            <>
+              {[...Array(5)].map((_, i) => (
+                <motion.div
+                  key={i}
+                  animate={{
+                    scale: [0, 1, 0],
+                    opacity: [0, 1, 0],
+                    rotate: [0, 180, 360],
+                  }}
+                  transition={{
+                    duration: 2,
+                    repeat: Infinity,
+                    delay: i * 0.4,
+                    ease: "easeInOut",
+                  }}
+                  style={{
+                    position: "absolute",
+                    top: `${20 + i * 15}%`,
+                    left: `${20 + i * 20}%`,
+                    width: "8px",
+                    height: "8px",
+                    background: getRarityColor("Mythic"),
+                    borderRadius: "50%",
+                    boxShadow: `0 0 10px ${getRarityColor("Mythic")}`,
+                    pointerEvents: "none",
+                    zIndex: 1,
+                  }}
+                />
+              ))}
+            </>
+          )}
           {/* Card Name - Big and Stylized */}
           <h2 style={{ 
             fontSize: "42px", 
@@ -928,31 +1001,38 @@ function App() {
                   marginBottom: "40px",
                 }}
               >
-                {/* Rarity Header */}
                 <div style={{
                   display: "flex",
                   justifyContent: "space-between",
                   alignItems: "center",
                   marginBottom: "20px",
                   padding: "15px 20px",
-                  background: `linear-gradient(135deg, ${getRarityColor(rarity)}22, transparent)`,
+                  background: getRarityGradient(rarity),
                   borderRadius: "12px",
                   border: `2px solid ${getRarityColor(rarity)}44`,
+                  boxShadow: `0 4px 20px ${getRarityColor(rarity)}33`,
                 }}>
                   <h3 style={{
                     fontFamily: "'Orbitron', sans-serif",
                     fontSize: "1.8rem",
-                    color: getRarityColor(rarity),
+                    background: `linear-gradient(135deg, #ffffff 0%, ${getRarityColor(rarity)} 100%)`,
+                    WebkitBackgroundClip: "text",
+                    WebkitTextFillColor: "transparent",
+                    backgroundClip: "text",
                     textShadow: `0 0 10px ${getRarityColor(rarity)}66`,
                     margin: 0,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
                   }}>
-                    {rarity}
+                    {getRarityIcon(rarity)} {rarity} Sperms {rarity === "Mythic" && "✨"}
                   </h3>
                   <p style={{
                     fontFamily: "'Poppins', sans-serif",
                     fontSize: "1rem",
                     opacity: 0.8,
                     margin: 0,
+                    color: getRarityColor(rarity),
                   }}>
                     Collected: {collected}/{total}
                   </p>
@@ -974,7 +1054,11 @@ function App() {
                         initial={{ opacity: 0, scale: 0.8 }}
                         animate={{ opacity: 1, scale: 1 }}
                         transition={{ delay: idx * 0.05 }}
-                        whileHover={{ scale: 1.05, y: -5 }}
+                        whileHover={isCollected ? { 
+                          scale: 1.05, 
+                          y: -5,
+                          boxShadow: `0 8px 30px ${getRarityColor(rarity)}66`,
+                        } : {}}
                         onClick={() => isCollected && setSelectedSperm(collectedData)}
                         className="glass"
                         style={{
@@ -989,6 +1073,7 @@ function App() {
                           boxShadow: isCollected 
                             ? `0 4px 20px ${getRarityColor(rarity)}44`
                             : "0 4px 20px rgba(0,0,0,0.2)",
+                          transition: "all 0.3s ease",
                         }}
                       >
                         {/* Locked Overlay */}
@@ -1018,21 +1103,50 @@ function App() {
 
                         {/* Shimmer for Mythic collected cards */}
                         {isCollected && rarity === "Mythic" && (
-                          <motion.div
-                            animate={{ x: ["-100%", "200%"] }}
-                            transition={{ duration: 4, repeat: Infinity, ease: "linear", repeatDelay: 2 }}
-                            style={{
-                              position: "absolute",
-                              top: 0,
-                              left: 0,
-                              width: "50%",
-                              height: "100%",
-                              background: "linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.25), transparent)",
-                              pointerEvents: "none",
-                              borderRadius: "16px",
-                              willChange: "transform",
-                            }}
-                          />
+                          <>
+                            <motion.div
+                              animate={{ x: ["-100%", "200%"] }}
+                              transition={{ duration: 4, repeat: Infinity, ease: "linear", repeatDelay: 2 }}
+                              style={{
+                                position: "absolute",
+                                top: 0,
+                                left: 0,
+                                width: "50%",
+                                height: "100%",
+                                background: "linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.25), transparent)",
+                                pointerEvents: "none",
+                                borderRadius: "16px",
+                                willChange: "transform",
+                              }}
+                            />
+                            {[...Array(3)].map((_, i) => (
+                              <motion.div
+                                key={i}
+                                animate={{
+                                  scale: [0, 1, 0],
+                                  opacity: [0, 1, 0],
+                                  rotate: [0, 180, 360],
+                                }}
+                                transition={{
+                                  duration: 2,
+                                  repeat: Infinity,
+                                  delay: i * 0.6,
+                                  ease: "easeInOut",
+                                }}
+                                style={{
+                                  position: "absolute",
+                                  top: `${20 + i * 30}%`,
+                                  left: `${20 + i * 20}%`,
+                                  width: "8px",
+                                  height: "8px",
+                                  background: getRarityColor("Mythic"),
+                                  borderRadius: "50%",
+                                  boxShadow: `0 0 10px ${getRarityColor("Mythic")}`,
+                                  pointerEvents: "none",
+                                }}
+                              />
+                            ))}
+                          </>
                         )}
 
                         <div style={{ 
@@ -1061,8 +1175,12 @@ function App() {
                             fontWeight: 600,
                             letterSpacing: "0.5px",
                             marginTop: "8px",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: "4px",
                           }}>
-                            {rarity}
+                            {getRarityIcon(rarity)} {rarity}
                           </p>
                         )}
                       </motion.div>
@@ -1165,11 +1283,15 @@ function App() {
                   fontWeight: 700,
                   color: "#ffffff",
                   fontFamily: "'Orbitron', sans-serif",
-                  letterSpacing: "1px",
-                  margin: 0,
-                }}>
-                  {selectedSperm.rarity.toUpperCase()}
-                </p>
+                    letterSpacing: "1px",
+                    margin: 0,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "6px",
+                  }}>
+                    {getRarityIcon(selectedSperm.rarity)} {selectedSperm.rarity.toUpperCase()}
+                  </p>
               </motion.div>
             </div>
 
