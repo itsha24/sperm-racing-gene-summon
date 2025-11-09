@@ -1,5 +1,4 @@
 // frontend/src/SpermIcon.jsx
-//testing
 export default function SpermIcon({ color = "#a855f7", size = 90 }) {
     return (
       <svg
