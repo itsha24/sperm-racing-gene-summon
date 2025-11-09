@@ -61,8 +61,8 @@ export default function CardDisplay({ card, opening, raceResult, onReset }) {
       />
 
       {/* Particle Burst for Epic+ rarities */}
-      {["Legendary", "Mythic", "Epic"].includes(card.rarity) && (
-        <ParticleBurst color={card.rarity === "Legendary" || card.rarity === "Mythic" ? "gold" : "#b388ff"} />
+      {["Mythic", "Epic"].includes(card.rarity) && (
+        <ParticleBurst color={card.rarity === "Mythic" ? "gold" : "#b388ff"} />
       )}
 
       {/* Main Card */}

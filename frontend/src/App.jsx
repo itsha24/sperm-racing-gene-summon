@@ -111,7 +111,8 @@ function App() {
       setOpening(false);
       playRaritySound(data.rarity);
       
-      const rarityGlow = glowColorMap[data.rarity] || "#ffffff";
+      // Set glow color (already set in timeout1, but ensure it's correct)
+      const rarityGlow = glowColorMap[data.rarity] || glowColorMap.Common;
       setGlowColor(rarityGlow);
   
       // Save to collection

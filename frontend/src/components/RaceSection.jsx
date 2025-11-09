@@ -189,8 +189,8 @@ export default function RaceSection({
               fontSize: "2rem", 
               fontWeight: 700,
               fontFamily: "'Orbitron', sans-serif",
-              color: getRarityColor(raceResult.capsuleTier === "Mythic" ? "Legendary" : raceResult.capsuleTier),
-              textShadow: `0 0 15px ${getRarityColor(raceResult.capsuleTier === "Mythic" ? "Legendary" : raceResult.capsuleTier)}`,
+              color: getRarityColor(raceResult.capsuleTier),
+              textShadow: `0 0 15px ${getRarityColor(raceResult.capsuleTier)}`,
               position: "relative",
               zIndex: 1,
             }}>
