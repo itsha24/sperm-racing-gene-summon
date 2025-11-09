@@ -4,6 +4,7 @@ import { summonCard, runRace } from "./api";
 import "./App.css";
 import ParticleBurst from "./ParticleBurst";
 import SpermIcon from "./SpermIcon";
+import { playRaritySound, playRegularSound, isMuted, toggleMute } from "./soundPlayer";
 
 function App() {
   const [card, setCard] = useState(null);
@@ -22,6 +23,15 @@ function App() {
   // Spermdex view mode state
   const [viewMode, setViewMode] = useState("summon"); // "summon" or "spermdex"
   const [selectedSperm, setSelectedSperm] = useState(null); // For modal details
+  
+  // Audio mute state
+  const [muted, setMuted] = useState(isMuted());
+  
+  // Update mute state when it changes
+  const handleToggleMute = () => {
+    const newMutedState = toggleMute();
+    setMuted(newMutedState);
+  };
 
   async function handleRunRace() {
     // Clear previous card and race result when starting a new race
@@ -45,6 +55,9 @@ function App() {
         await new Promise(resolve => setTimeout(resolve, remainingTime));
         
         setRaceResult(result);
+        
+        // Play regular sound when results show up
+        playRegularSound();
       } else {
         console.error("Invalid race result:", result);
         alert("Failed to run race. Please check if the backend is running.");
@@ -102,6 +115,9 @@ function App() {
       setCard(data);
       setOpening(false);
       
+      // Play rarity-based sound with dynamic effects
+      playRaritySound(data.rarity);
+      
       // Set final glow color
       const rarityGlow = glowColorMap[data.rarity] || "#ffffff";
       setGlowColor(rarityGlow);
@@ -131,6 +147,11 @@ function App() {
     }, revealDelay);
     timeoutRefs.current.push(timeout2);
   }
+
+  // Sync mute state on mount
+  useEffect(() => {
+    setMuted(isMuted());
+  }, []);
 
   // Ensure background stays neutral
   useEffect(() => {
@@ -291,12 +312,14 @@ function App() {
         backgroundClip: "text",
       }}>🧬 Gene Summon Mode</h1>
 
-      {/* View Toggle Buttons */}
+      {/* View Toggle Buttons and Audio Toggle */}
       <div style={{ 
         display: "flex", 
         gap: "15px", 
         marginBottom: "30px",
         justifyContent: "center",
+        alignItems: "center",
+        flexWrap: "wrap",
       }}>
         <motion.button
           onClick={() => setViewMode("summon")}
@@ -313,7 +336,7 @@ function App() {
             opacity: viewMode === "summon" ? 1 : 0.7,
           }}
         >
-          🧬 Summon
+          Summon
         </motion.button>
         <motion.button
           onClick={() => setViewMode("spermdex")}
@@ -330,7 +353,26 @@ function App() {
             opacity: viewMode === "spermdex" ? 1 : 0.7,
           }}
         >
-          📘 Spermdex ({collection.length})
+          Spermdex ({collection.length})
+        </motion.button>
+        <motion.button
+          onClick={handleToggleMute}
+          className="gradient-button"
+          whileHover={{ scale: 1.05, y: -2 }}
+          whileTap={{ scale: 0.98 }}
+          style={{
+            padding: "12px 20px",
+            fontSize: "1rem",
+            borderRadius: "12px",
+            background: muted
+              ? "linear-gradient(135deg, #666 0%, #444 100%)"
+              : "linear-gradient(135deg, #9333ea 0%, #64b5f6 100%)",
+            opacity: muted ? 0.7 : 1,
+            minWidth: "60px",
+          }}
+          title={muted ? "Unmute audio" : "Mute audio"}
+        >
+          {muted ? "🔇" : "🔊"}
         </motion.button>
       </div>
 
@@ -405,7 +447,7 @@ function App() {
               cursor: runningRace ? "not-allowed" : "pointer",
             }}
           >
-            🏃 Run Race
+            Get Race Results
           </motion.button>
         )}
 
@@ -536,7 +578,7 @@ function App() {
                   cursor: opening ? "not-allowed" : "pointer",
                 }}
               >
-                {opening ? "Sequencing..." : "🧬 Sequence Capsule"}
+                {opening ? "Sequencing..." : "Sequence Capsule"}
               </motion.button>
               <motion.button
                 onClick={() => {
@@ -983,7 +1025,7 @@ function App() {
             WebkitTextFillColor: "transparent",
             backgroundClip: "text",
           }}>
-            📘 Spermdex Collection
+            Spermdex Collection
           </h2>
 
           {/* Rarity Sections */}
