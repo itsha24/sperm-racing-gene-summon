@@ -1,0 +1,47 @@
+[
+  {
+    "id": "turbo-tail-tom",
+    "name": "Turbo Tail Tom",
+    "rarity": "Legendary",
+    "emoji": "💫",
+    "stats": { "speed": 95, "focus": 88, "endurance": 82, "chaos": 90 },
+    "trait": "Born to spin.",
+    "flavorText": "Spins so fast the other swimmers think he teleports."
+  },
+  {
+    "id": "lazy-larry",
+    "name": "Lazy Larry",
+    "rarity": "Common",
+    "emoji": "😴",
+    "stats": { "speed": 32, "focus": 40, "endurance": 51, "chaos": 70 },
+    "trait": "Perpetually on a break.",
+    "flavorText": "Still deciding which way the egg is."
+  },
+  {
+    "id": "professor-wiggle",
+    "name": "Professor Wiggle",
+    "rarity": "Epic",
+    "emoji": "🧠",
+    "stats": { "speed": 78, "focus": 92, "endurance": 80, "chaos": 66 },
+    "trait": "Invented the backstroke.",
+    "flavorText": "Claims to have a PhD in Wiggle Dynamics."
+  },
+  {
+    "id": "chaos-carl",
+    "name": "Chaos Carl",
+    "rarity": "Rare",
+    "emoji": "🤪",
+    "stats": { "speed": 70, "focus": 55, "endurance": 65, "chaos": 99 },
+    "trait": "Unpredictable trajectory.",
+    "flavorText": "Nobody knows where he's going, including him."
+  },
+  {
+    "id": "zen-zen",
+    "name": "Zen Zen",
+    "rarity": "Epic",
+    "emoji": "🧘",
+    "stats": { "speed": 80, "focus": 99, "endurance": 74, "chaos": 40 },
+    "trait": "Unshakable focus.",
+    "flavorText": "Reaches the egg in three calm, efficient strokes."
+  }
+]
