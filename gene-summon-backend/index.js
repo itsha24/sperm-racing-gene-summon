@@ -7,20 +7,29 @@ const app = express();
 app.use(express.json());
 
 // CORS configuration - allow both production (Vercel) and local development
-const allowedOrigins = [
-  "https://sperm-racing-gene-summon.vercel.app",
-  "http://localhost:5173",
-  "http://localhost:5174", // Vite sometimes uses 5174 if 5173 is taken
-];
-
 app.use(cors({
   origin: function (origin, callback) {
     // Allow requests with no origin (like mobile apps, Postman, or same-origin requests)
-    if (!origin || allowedOrigins.includes(origin)) {
+    if (!origin) {
       callback(null, true);
-    } else {
-      callback(new Error("Not allowed by CORS"));
+      return;
     }
+
+    // Allow localhost for development
+    if (origin.startsWith("http://localhost:")) {
+      callback(null, true);
+      return;
+    }
+
+    // Allow any Vercel deployment (*.vercel.app)
+    if (origin.includes(".vercel.app")) {
+      callback(null, true);
+      return;
+    }
+
+    // Log rejected origins for debugging
+    console.log("CORS blocked origin:", origin);
+    callback(new Error("Not allowed by CORS"));
   },
   credentials: true,
 }));
